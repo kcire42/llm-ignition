@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  ollama:
+    image: ollama/ollama
+    container_name: llm_service
+    ports:
+      - "11434:11434"
+
+    command:  >
+      /bin/sh -c "
+      ollama pull phi3:mini &&
+      ollama serve
+      "
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+
+    # networks:
+    #   - isolated_backend
+  
+  chroma:
+    image: chromadb/chroma
+    container_name: chroma_service
+    ports:
+      - "11743:11743"
+    volumes:
+      - chroma_data:/chroma/data
+    restart: unless-stopped
+
+    # networks:
+    #   - isolated_backend
+
+
+volumes:
+  ollama_data:
+  chroma_data:
+
+networks:
+  isolated_backend:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.25.0.0/24
+

@@ -1,0 +1,14 @@
+
+
+LLM_HOST = 'localhost'
+
+OLLAMA_PORT = 11434
+CHROMA_PORT = 11743
+
+MODEL_NAME = 'phi3:mini'
+
+OLLAMA_API_URL = f'http://{LLM_HOST}:{OLLAMA_PORT}/api/generate'
+CHROMA_API_URL = f'http://{LLM_HOST}:{CHROMA_PORT}'
+CHROMA_COLLECTION_NAME = 'ignition_knowledge_base'
+
+REQUEST_TIMEOUT_SECONDS = 90
