@@ -1,0 +1,12 @@
+# Librerías principales para RAG y procesamiento de documentos
+langchain
+langchain-community
+
+# Base de datos vectorial (para la persistencia del índice)
+chromadb
+
+# Modelo de Embedding Sentence-Transformer (para funcionar localmente)
+sentence-transformers
+
+# Loader para manejar archivos PDF (necesario para PyPDFLoader)
+pypdf

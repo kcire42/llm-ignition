@@ -23,7 +23,7 @@ services:
     image: chromadb/chroma
     container_name: chroma_service
     ports:
-      - "11743:11743"
+      - "11743:8000"
     volumes:
       - chroma_data:/chroma/data
     restart: unless-stopped
