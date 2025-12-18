@@ -6,12 +6,7 @@ services:
     container_name: llm_service
     ports:
       - "11434:11434"
-
-    command:  >
-      /bin/sh -c "
-      ollama pull phi3:mini &&
-      ollama serve
-      "
+      
     volumes:
       - ollama_data:/root/.ollama
     restart: unless-stopped

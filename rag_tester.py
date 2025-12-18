@@ -1,95 +1,83 @@
-# rag_tester.py
 import requests
-import json
-from ignition_gateway_scripts.LLM_Integration.config import CHROMA_API_URL, CHROMA_COLLECTION_NAME, REQUEST_TIMEOUT_SECONDS, LLM_HOST, CHROMA_PORT, OLLAMA_API_URL, MODEL_NAME
+import chromadb
+from langchain_community.vectorstores import Chroma
+from langchain_community.embeddings import SentenceTransformerEmbeddings
+from ignition_gateway_scripts.LLM_Integration.config import CHROMA_COLLECTION_NAME, LLM_HOST, CHROMA_PORT, MODEL_NAME, OLLAMA_API_URL
 
-# Función para buscar contexto en ChromaDB
-def buscar_contexto(query):
-    print(f"\n[1] Buscando contexto relevante para: '{query}'...")
-    
-    search_url = f"{CHROMA_API_URL}/api/v1/collections/{CHROMA_COLLECTION_NAME}/query"
-    
+def ask_llm(prompt: str) -> str:
     payload = {
-        "query_text": [query], 
-        "n_results": 4, 
-        "include": ["documents", "metadatas"] 
-    }
-
-    try:
-        response = requests.post(
-            search_url, 
-            data=json.dumps(payload),
-            headers={"Content-Type": "application/json"},
-            timeout=REQUEST_TIMEOUT_SECONDS
-        )
-        response.raise_for_status() 
-
-        results = response.json().get("documents", [[]])[0]
-        contexto = "\n---\n".join(results)
-        
-        print(f"    ✅ Contexto recuperado: {len(results)} fragmentos.")
-        return contexto
-            
-    except requests.exceptions.RequestException as e:
-        print(f"    ❌ ERROR al conectar o consultar ChromaDB. Detalle: {e}")
-        return None
-
-# Función para generar la respuesta RAG
-def generar_respuesta_rag(user_query):
-    contexto = buscar_contexto(user_query)
-    
-    if not contexto:
-        return "ERROR: Falló la recuperación del contexto desde ChromaDB."
-
-    # Construcción del Prompt Aumentado
-    system_prompt_template = (
-        "Eres un asistente experto en sistemas SCADA. "
-        "Responde a la siguiente pregunta del usuario **únicamente basándote en el contexto proporcionado** "
-        "entre los delimitadores triples (---). Si la pregunta no puede ser respondida con la información "
-        "proporcionada, indica que necesitas más información."
-        "\n\n---CONTEXTO RELEVADO---\n"
-        "{contexto}"
-        "\n---FIN CONTEXTO---\n"
-    )
-    
-    final_prompt = system_prompt_template.format(contexto=contexto) + \
-                   f"\n\nPREGUNTA DEL USUARIO: {user_query}"
-
-    print("\n[2] Enviando Prompt aumentado a Ollama...")
-    
-    ollama_payload = {
         "model": MODEL_NAME,
-        "prompt": final_prompt,
-        "stream": False, 
-        "options": {"temperature": 0.1, "num_ctx": 4096}
+        "prompt": prompt,
+        "stream": False
     }
+
+    response = requests.post(OLLAMA_API_URL, json=payload)
+    response.raise_for_status()
+
+    return response.json()["response"]
+
+
+def buscar_contexto(query):
+    #print(f"Buscando contexto para la consulta: {query}")
     
     try:
-        response = requests.post(
-            OLLAMA_API_URL, 
-            data=json.dumps(ollama_payload),
-            headers={"Content-Type": "application/json"},
-            timeout=REQUEST_TIMEOUT_SECONDS
+        # Usamos el cliente oficial en lugar de requests manual para evitar el error 405
+        chroma_client = chromadb.HttpClient(host=LLM_HOST, port=CHROMA_PORT)
+        
+        # Necesitamos el modelo de embedding para que Chroma sepa qué buscar
+        embedding_model = SentenceTransformerEmbeddings(model_name='all-MiniLM-L6-v2')
+        
+        vector_store = Chroma(
+            client=chroma_client,
+            collection_name=CHROMA_COLLECTION_NAME,
+            embedding_function=embedding_model
         )
-        response.raise_for_status()
+        
+        # Realizamos la búsqueda
+        results = vector_store.similarity_search(query, k=3)
+        
+        contexto = "\n---\n".join([doc.page_content for doc in results])
+        #print(f"    ✅ Contexto recuperado: {len(results)} fragmentos.")
+        prompt = f"""
+                You are a technical documentation assistant for Ignition Smart Factory.
 
-        result = response.json()
-        print("    ✅ Respuesta recibida de Ollama.")
-        return result.get("response", "Error: Respuesta LLM vacía.")
+                STRICT RULES:
+                - Answer ONLY with concrete, actionable steps.
+                - Use short, clear bullet points.
+                - Do NOT explain sections, guides, or assumptions.
+                - Do NOT mention document sections or numbers.
+                - Do NOT add commentary or meta explanations.
+                - Do NOT repeat the question.
+                - Do NOT include information not present in the context.
 
-    except requests.exceptions.RequestException as e:
-        print(f"    ❌ ERROR al conectar o consultar Ollama. Detalle: {e}")
-        return "Error de Conexión a Ollama."
+                FORMAT:
+                - Start directly with the steps.
+                - Maximum 7 steps.
+                - Each step must start with an action verb.
+
+                Question:
+                {query}
+
+                Context:
+                {contexto}
+
+                Answer:
+                """
+        return ask_llm(prompt)
+
+    except Exception as e:
+        #print(f"ERROR al consultar ChromaDB: {e}")
+        return 'Fail'
 
 # --- EJEMPLO DE PRUEBA ---
 if __name__ == "__main__":
-    pregunta_de_prueba = "¿Cuál son las instrucciones para dividir?"
+    pregunta_de_prueba = "List the steps to create Zone Group tags in Ignition Smart Factory."
     
     print("\n==============================================")
-    print(f"🌐 INICIANDO PRUEBA RAG para: {pregunta_de_prueba}")
+    print(f"🌐 INICIANDO PRUEBA RAG para pregunta")
     print("==============================================")
     
-    respuesta = generar_respuesta_rag(pregunta_de_prueba)
+    respuesta = buscar_contexto(pregunta_de_prueba)
     
     print("\n==============================================")
     print("🤖 RESPUESTA FINAL DEL LLM:")
