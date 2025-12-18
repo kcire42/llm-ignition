@@ -8,7 +8,11 @@ def ask_llm(prompt: str) -> str:
     payload = {
         "model": MODEL_NAME,
         "prompt": prompt,
-        "stream": False
+        "stream": False,
+        "options": {
+        "temperature": 0.2,
+        "num_predict": 250
+        }
     }
 
     response = requests.post(OLLAMA_API_URL, json=payload)
@@ -17,7 +21,7 @@ def ask_llm(prompt: str) -> str:
     return response.json()["response"]
 
 
-def buscar_contexto(query):
+def search_context(question:str):
     #print(f"Buscando contexto para la consulta: {query}")
     
     try:
@@ -34,7 +38,7 @@ def buscar_contexto(query):
         )
         
         # Realizamos la búsqueda
-        results = vector_store.similarity_search(query, k=3)
+        results = vector_store.similarity_search(question, k=3)
         
         contexto = "\n---\n".join([doc.page_content for doc in results])
         #print(f"    ✅ Contexto recuperado: {len(results)} fragmentos.")
@@ -56,7 +60,7 @@ def buscar_contexto(query):
                 - Each step must start with an action verb.
 
                 Question:
-                {query}
+                {question}
 
                 Context:
                 {contexto}
@@ -77,7 +81,7 @@ if __name__ == "__main__":
     print(f"🌐 INICIANDO PRUEBA RAG para pregunta")
     print("==============================================")
     
-    respuesta = buscar_contexto(pregunta_de_prueba)
+    respuesta = search_context(pregunta_de_prueba)
     
     print("\n==============================================")
     print("🤖 RESPUESTA FINAL DEL LLM:")
