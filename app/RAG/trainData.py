@@ -4,7 +4,7 @@ from langchain_community.document_loaders import PyPDFLoader, DirectoryLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import Chroma
 from langchain_community.embeddings import SentenceTransformerEmbeddings
-from ignition_gateway_scripts.LLM_Integration.config import CHROMA_API_URL, CHROMA_COLLECTION_NAME, REQUEST_TIMEOUT_SECONDS, LLM_HOST, CHROMA_PORT
+from LLM_Integration.config import CHROMA_API_URL, CHROMA_COLLECTION_NAME, REQUEST_TIMEOUT_SECONDS, OLLAMA_HOST, CHROMA_PORT
 
 
 # =========================
@@ -12,7 +12,7 @@ from ignition_gateway_scripts.LLM_Integration.config import CHROMA_API_URL, CHRO
 # =========================
 
 # Ruta donde se encuentran los documentos PDF que se van a indexar
-DOCS_PATH = './docs_to_index/'
+DOCS_PATH = './KnowledgeBase/'
 
 # Modelo de embeddings a utilizar (Sentence Transformers)
 # all-MiniLM-L6-v2 es ligero, rápido y muy usado para RAG
@@ -23,7 +23,7 @@ EMBEDDING_MODEL_NAME = 'all-MiniLM-L6-v2'
 # FUNCIÓN PRINCIPAL
 # =========================
 
-def index_documents():
+def trainRagData():
     """
     Carga documentos PDF desde un directorio,
     los divide en fragmentos (chunks),
@@ -87,7 +87,7 @@ def index_documents():
     try:
         # Cliente HTTP para conectarse a Chroma (servidor externo)
         chroma_client = chromadb.HttpClient(
-            host=LLM_HOST,
+            host=OLLAMA_HOST,
             port=CHROMA_PORT
         )
 
@@ -117,10 +117,3 @@ def index_documents():
         return
 
 
-# =========================
-# ENTRY POINT
-# =========================
-
-if __name__ == "__main__":
-    index_documents()
-    print("Document indexing completed.")
