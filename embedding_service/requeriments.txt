@@ -1,0 +1,5 @@
+langchain-text-splitters
+fastapi
+psycopg2-binary
+dotenv
+re

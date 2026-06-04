@@ -4,10 +4,12 @@ from app.Youtube_Extractor.Database.database_manager import *
 from app.Youtube_Extractor.Validate_Data.integrity_data import validate_video_metadata
 from app.Youtube_Extractor.Service.summary_service import get_summary_from_llm
 import asyncio
-from shared.logger_config import setup_logger
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 if __name__ == "__main__":
-    logger = setup_logger("main.IngestService")
     logger.debug("🚀 Iniciando el proceso de ingestión de videos de YouTube...")
     youtube_channel = 'https://www.youtube.com/@MeDicenDai'
     # 1. INGESTIÓN: Obtener y registrar videos nuevos
